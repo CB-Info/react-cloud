@@ -10,6 +10,7 @@ import {
   UseGuards,
   Delete,
   NotFoundException,
+  UnauthorizedException,
   Query,
   Logger,
   BadRequestException,
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt.auth.guard';
 import { GalleryDTO } from '../dto/gallery.dto';
 import { Gallery } from '../models/gallery.model';
 import { Request } from 'express';
+import { userInfo } from 'os';
 
 @ApiTags('Gallery')
 @UseGuards(JwtAuthGuard)
@@ -42,8 +44,19 @@ export class GalleryController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials',
   })
-  async create(@Body() galleryDto: GalleryDTO) {
-    const newGallery = await this.galleryService.createGallery(galleryDto);
+  async create(
+    @Body() galleryDto: GalleryDTO,
+    @Req() request: RequestWithUser,
+  ) {
+    const user = request.user as any;
+    if (!user || !user.userId) {
+      throw new UnauthorizedException('User ID is missing from the request.');
+    }
+
+    const newGallery = await this.galleryService.createGallery(
+      galleryDto,
+      user.userId,
+    );
 
     return { error: null, data: newGallery };
   }
@@ -130,12 +143,34 @@ export class GalleryController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials',
   })
-  async deleteGallery(@Param('id') galleryId: string) {
-    const isDeleted = await this.galleryService.deleteGallery(galleryId);
+  async deleteGallery(
+    @Param('id') galleryId: string,
+    @Req() request: RequestWithUser,
+  ) {
+    const user = request.user as any;
+    if (!user || !user.userId) {
+      throw new UnauthorizedException('User ID is missing from the request.');
+    }
+
+    const isDeleted = await this.galleryService.deleteGallery(
+      galleryId,
+      user.userId,
+    );
     if (!isDeleted) {
       throw new NotFoundException('Gallery not found or already deleted.');
     }
     return { error: null, data: `Gallery ${galleryId} deleted.` };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Get user's Galleries" })
+  @Get('/user')
+  async getUserGalleries(@Req() request: RequestWithUser) {
+    const user = request.user as any;
+    const userId = user.userId;
+
+    const galleries = await this.galleryService.getUserGalleries(userId);
+    return { error: null, data: galleries };
   }
 }
 

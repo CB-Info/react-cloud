@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { GalleryRepository } from '../repositories/gallery.repository';
 import { GalleryDTO } from '../dto/gallery.dto';
 import { Gallery } from '../models/gallery.model';
 import { User } from '../../user/models/user.model';
 import { CloudStorageService } from 'src/common/services/cloud-storage.service';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class GalleryService {
@@ -16,13 +18,14 @@ export class GalleryService {
     private readonly cloudStorageService: CloudStorageService,
   ) {}
 
-  async createGallery(parameters: GalleryDTO) {
+  async createGallery(parameters: GalleryDTO, userId: string) {
     try {
       const { title, image } = parameters;
 
       const newGallery = (await this.galleryRepository.insert({
         title: title,
         image: image,
+        owner: new Types.ObjectId(userId),
       })) as Gallery;
 
       return await this.galleryRepository.findOneById(newGallery._id);
@@ -70,10 +73,16 @@ export class GalleryService {
     return null;
   }
 
-  async deleteGallery(galleryId: string): Promise<boolean> {
+  async deleteGallery(galleryId: string, userId: string): Promise<boolean> {
     const gallery = await this.galleryRepository.findOneById(galleryId);
     if (!gallery) {
       return false;
+    }
+
+    if (!gallery.owner.equals(new Types.ObjectId(userId))) {
+      throw new UnauthorizedException(
+        'You are not allowed to delete this image.',
+      );
     }
 
     const deleteSuccess = await this.galleryRepository.deleteOneBy({
@@ -93,11 +102,25 @@ export class GalleryService {
 
   private extractFileNameFromUrl(url: string): string | null {
     try {
-      const parts = url.split('/');
-      return parts[parts.length - 1];
-    } catch {
+      const urlObject = new URL(url);
+      let pathname = urlObject.pathname;
+
+      pathname = decodeURIComponent(pathname);
+
+      const parts = pathname.split('/');
+      if (parts.length < 3) return null;
+
+      return parts.slice(2).join('/'); // Exclut "cloud-pct/" pour garder "images/nom-du-fichier.ext"
+    } catch (error) {
+      console.error("Erreur lors de l'extraction du nom de fichier:", error);
       return null;
     }
+  }
+
+  async getUserGalleries(userId: string) {
+    return await this.galleryRepository.findManyBy({
+      owner: new Types.ObjectId(userId),
+    });
   }
 
   async generateSignedUrl(fileName: string) {

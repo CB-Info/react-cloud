@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import PropTypes from 'prop-types';
+import { useState } from "react";
+import PropTypes from "prop-types";
 import API from "../api/axios.jsx";
-import {isAccessTokenExpired} from "../api/refreshToken.js";
+import { isAccessTokenExpired } from "../api/refreshToken.js";
 
 function ImageCard({ image }) {
   const [likes, setLikes] = useState(image.likes.length);
@@ -10,51 +10,57 @@ function ImageCard({ image }) {
     try {
       const token = localStorage.getItem("JWT");
       if (isAccessTokenExpired(token)) {
-        await refresh()
+        await refresh();
       }
       const currentToken = localStorage.getItem("JWT");
-      const response = await API.post(`/galleries/${image._id}/like`, {},{
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
-      })
+      const response = await API.post(
+        `/galleries/${image._id}/like`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${currentToken}`,
+          },
+        }
+      );
 
       if (response.data.isLike !== null) {
-        setLikes(likes+1)
+        setLikes(likes + 1);
       }
-    } catch {
-    }
-  }
+    } catch {}
+  };
 
   const refresh = async () => {
     try {
       const refreshToken = localStorage.getItem("REFRESH_TOKEN");
       const response = await API.post("/auth/refresh", { refreshToken });
-      localStorage.setItem("JWT", response.data.token.accessToken)
+      localStorage.setItem("JWT", response.data.token.accessToken);
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
-  }
+  };
 
   const handleUnlike = async () => {
     try {
       const token = localStorage.getItem("JWT");
       if (isAccessTokenExpired(token)) {
-        await refresh()
+        await refresh();
       }
       const currentToken = localStorage.getItem("JWT");
-      const response = await API.post(`/galleries/${image._id}/unlike`, {},{
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
-      })
+      const response = await API.post(
+        `/galleries/${image._id}/unlike`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${currentToken}`,
+          },
+        }
+      );
 
       if (response.data.isUnlike !== null) {
-        setLikes(likes-1)
+        setLikes(likes - 1);
       }
-    } catch {
-    }
-  }
+    } catch {}
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -86,12 +92,12 @@ function ImageCard({ image }) {
 }
 
 ImageCard.propTypes = {
-    image: PropTypes.shape({
-      src: PropTypes.string.isRequired,
-      title: PropTypes.string.isRequired,
-      likes: PropTypes.array.isRequired,
-      _id: PropTypes.string.isRequired,
-    }).isRequired,
-  };
+  image: PropTypes.shape({
+    src: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    likes: PropTypes.array.isRequired,
+    _id: PropTypes.string.isRequired,
+  }).isRequired,
+};
 
 export default ImageCard;

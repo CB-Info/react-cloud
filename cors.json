@@ -1,0 +1,9 @@
+[
+  {
+    "origin": ["https://front-service-208091987949.europe-west9.run.app"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "responseHeader": ["Content-Type", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]
+

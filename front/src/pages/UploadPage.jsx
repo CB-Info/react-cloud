@@ -1,17 +1,40 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
+import UserGallery from "../components/UserGallery";
 
 function UploadPage() {
   const [title, setTitle] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [userImages, setUserImages] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
   const { logout } = useContext(AuthContext);
+
+  useEffect(() => {
+    fetchUserImages();
+  }, []);
+
+  const fetchUserImages = async () => {
+    try {
+      const token = localStorage.getItem("JWT");
+      if (!token) return;
+
+      const response = await API.get("/galleries/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 200) {
+        setUserImages(response.data.data);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la récupération des images:", err);
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -79,6 +102,7 @@ function UploadPage() {
         setTitle("");
         setSelectedFile(null);
         setPreviewUrl(null);
+        fetchUserImages();
       } else {
         setError("Une erreur est survenue lors de l’upload.");
       }
@@ -165,6 +189,7 @@ function UploadPage() {
           Uploader
         </button>
       </form>
+      <UserGallery userImages={userImages} setUserImages={setUserImages} />
     </div>
   );
 }
